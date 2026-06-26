@@ -65,6 +65,7 @@ check_script_exists() {
 run_subscript() {
     local script="$1"
     local description="$2"
+    local base_dir="$3"
     
     print_header "$description"
     
@@ -73,7 +74,7 @@ run_subscript() {
         return 1
     fi
     
-    if bash "$script"; then
+    if bash "$script" "$base_dir"; then
         print_status "$description completed successfully"
         return 0
     else
@@ -117,7 +118,12 @@ main() {
     # Get the directory where this script is located
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     
+    # Use home directory for runners
+    HOME_DIR=$(eval echo ~ubuntu)
+    RUNNERS_HOME="${HOME_DIR}/actions-runners"
+    
     print_info "Script directory: $SCRIPT_DIR"
+    print_info "Runners home directory: $RUNNERS_HOME"
     echo ""
     
     # Step 1: Install applications
@@ -131,7 +137,7 @@ main() {
     print_header "Step 2: GitHub Actions Runners Setup"
     
     if prompt_user "Do you want to set up GitHub Actions runners now?"; then
-        if ! run_subscript "${SCRIPT_DIR}/setup_actions.sh" "Setting Up GitHub Actions Runners"; then
+        if ! run_subscript "${SCRIPT_DIR}/setup_actions.sh" "Setting Up GitHub Actions Runners" "$RUNNERS_HOME"; then
             print_error "Runner setup failed. Continuing anyway..."
         fi
         
@@ -139,16 +145,16 @@ main() {
         
         # Step 3: Start runners (only if setup was done)
         if prompt_user "Do you want to start the runners now?"; then
-            if ! run_subscript "${SCRIPT_DIR}/start_runners.sh" "Starting GitHub Actions Runners"; then
+            if ! run_subscript "${SCRIPT_DIR}/start_runners.sh" "Starting GitHub Actions Runners" "$RUNNERS_HOME"; then
                 print_error "Starting runners failed"
             fi
         else
             print_info "Skipping runner startup"
-            print_info "You can start runners later with: bash ${SCRIPT_DIR}/start_runners.sh"
+            print_info "You can start runners later with: bash ${SCRIPT_DIR}/start_runners.sh $RUNNERS_HOME"
         fi
     else
         print_info "Skipping GitHub Actions runners setup"
-        print_info "You can set up runners later with: bash ${SCRIPT_DIR}/setup_actions.sh"
+        print_info "You can set up runners later with: bash ${SCRIPT_DIR}/setup_actions.sh $RUNNERS_HOME"
     fi
     
     # Final summary
@@ -161,7 +167,7 @@ main() {
     echo "  • Nginx"
     echo "  • Certbot"
     
-    if [ -d "${SCRIPT_DIR}/actions-runners" ] && [ "$(ls -A ${SCRIPT_DIR}/actions-runners 2>/dev/null | grep -v logs)" ]; then
+    if [ -d "$RUNNERS_HOME" ] && [ "$(ls -A $RUNNERS_HOME 2>/dev/null | grep -v logs)" ]; then
         echo "  • GitHub Actions Runners"
     fi
     
@@ -169,17 +175,18 @@ main() {
     
     print_info "Important next steps:"
     echo "  1. Log out and log back in for docker group changes to take effect"
-    echo "  2. Verify runners are running: bash ${SCRIPT_DIR}/runner_status.sh"
-    echo "  3. Check runner logs: tail -f ./actions-runners/logs/*.log"
+    echo "  2. Verify runners are running: bash ${SCRIPT_DIR}/runner_status.sh $RUNNERS_HOME"
+    echo "  3. Check runner logs: tail -f $RUNNERS_HOME/logs/*.log"
     echo "  4. Configure Nginx: /etc/nginx/sites-available/"
     echo "  5. Setup SSL: sudo certbot --nginx -d yourdomain.com"
     echo ""
     
     print_info "Useful commands:"
-    echo "  • Check runner status: bash ${SCRIPT_DIR}/runner_status.sh"
-    echo "  • Start runners: bash ${SCRIPT_DIR}/start_runners.sh"
-    echo "  • Setup runners: bash ${SCRIPT_DIR}/setup_actions.sh"
-    echo "  • Stop runners: pkill -f 'run.sh'"
+    echo "  • Check runner status: bash ${SCRIPT_DIR}/runner_status.sh $RUNNERS_HOME"
+    echo "  • Start runners: bash ${SCRIPT_DIR}/start_runners.sh $RUNNERS_HOME"
+    echo "  • Stop runners: bash ${SCRIPT_DIR}/stop_runners.sh $RUNNERS_HOME"
+    echo "  • Restart runners: bash ${SCRIPT_DIR}/restart_runners.sh $RUNNERS_HOME"
+    echo "  • Setup runners: bash ${SCRIPT_DIR}/setup_actions.sh $RUNNERS_HOME"
     echo ""
 }
 

@@ -5,7 +5,7 @@
 # Each runner runs in the background with separate logging
 
 # Configuration
-RUNNERS_BASE_DIR="${1:-.}/actions-runners"
+RUNNERS_BASE_DIR="${1:-$(eval echo ~ubuntu)/actions-runners}"
 LOGS_DIR="${RUNNERS_BASE_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
@@ -84,4 +84,3 @@ print_status "Log directory: $LOGS_DIR"
 print_status "=============================="
 
 exit 0
-

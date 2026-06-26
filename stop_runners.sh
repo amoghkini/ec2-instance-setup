@@ -4,7 +4,7 @@
 # This script stops all running GitHub runners gracefully
 
 # Configuration
-RUNNERS_BASE_DIR="${1:-.}/actions-runners"
+RUNNERS_BASE_DIR="${1:-$(eval echo ~ubuntu)/actions-runners}"
 LOGS_DIR="${RUNNERS_BASE_DIR}/logs"
 
 # Colors for output

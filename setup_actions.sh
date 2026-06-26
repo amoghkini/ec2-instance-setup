@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-BASE_DIR="${1:-.}"
+BASE_DIR="${1:-$(eval echo ~ubuntu)}"
 RUNNERS_DIR="${BASE_DIR}/actions-runners"
 
 # Default repositories (can be overridden)
@@ -244,7 +244,7 @@ setup_runner() {
                 if ./config.sh --url "$repo_url" --token "$config_token" --unattended --replace; then
                     print_status "Runner $runner_name configured successfully!"
                     print_info "Runner is ready at: $runner_dir"
-                    print_info "To start the runner, run: cd $runner_dir && ./run.sh"
+                    print_info "To start the runner, run: bash start_runners.sh $RUNNERS_DIR"
                 else
                     print_error "Configuration failed for $runner_name"
                 fi
@@ -262,6 +262,8 @@ setup_runner() {
 # Main script
 main() {
     print_header "GitHub Actions Runner Setup"
+    
+    print_info "Using runners directory: $RUNNERS_DIR"
     
     # Check if runners directory exists
     if [ ! -d "$RUNNERS_DIR" ]; then
@@ -300,10 +302,9 @@ main() {
     print_status "All runners have been configured!"
     print_info "Next steps:"
     echo -e "  1. Review runner status: $RUNNERS_DIR"
-    echo -e "  2. Start runners using: ./start_runners.sh"
+    echo -e "  2. Start runners using: bash start_runners.sh $RUNNERS_DIR"
     echo -e "  3. Check logs in: $RUNNERS_DIR/logs"
 }
 
 # Run main function
 main "$@"
-

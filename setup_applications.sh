@@ -122,7 +122,7 @@ main() {
     chmod 666 /var/run/docker.sock
     print_status "Docker socket permissions fixed"
 
-    
+
     # Install Nginx
     print_header "Step 4: Installing Nginx"
     
@@ -143,19 +143,19 @@ main() {
     systemctl enable nginx
     print_status "Nginx service enabled and started"
     
-    # # Install Certbot (optional, for SSL certificates)
-    # print_header "Step 5: Installing Certbot (Optional)"
+    # Install Certbot (optional, for SSL certificates)
+    print_header "Step 5: Installing Certbot (Optional)"
     
-    # if command_exists certbot; then
-    #     print_warning "Certbot is already installed"
-    #     certbot --version
-    # else
-    #     print_status "Installing Certbot and Nginx plugin..."
-    #     apt install -y certbot python3-certbot-nginx
+    if command_exists certbot; then
+        print_warning "Certbot is already installed"
+        certbot --version
+    else
+        print_status "Installing Certbot and Nginx plugin..."
+        apt install -y certbot python3-certbot-nginx
         
-    #     print_status "Certbot installed successfully"
-    #     certbot --version
-    # fi
+        print_status "Certbot installed successfully"
+        certbot --version
+    fi
     
     # Summary
     print_header "Setup Complete"

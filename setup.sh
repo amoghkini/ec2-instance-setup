@@ -82,13 +82,34 @@ run_subscript() {
     fi
 }
 
+# Function to prompt user for yes/no
+prompt_user() {
+    local prompt="$1"
+    local response
+    
+    while true; do
+        read -p "$(echo -e ${BLUE}$prompt${NC}) (yes/no): " response
+        case "$response" in
+            [Yy][Ee][Ss]|[Yy])
+                return 0
+                ;;
+            [Nn][Oo]|[Nn])
+                return 1
+                ;;
+            *)
+                print_error "Please answer 'yes' or 'no'"
+                ;;
+        esac
+    done
+}
+
 # Main setup
 main() {
     print_header "Complete Server Setup"
     print_info "This script will set up your server with:"
     echo "  1. Docker, Nginx, and Certbot"
-    echo "  2. GitHub Actions runners"
-    echo "  3. Start all runners"
+    echo "  2. GitHub Actions runners (optional)"
+    echo "  3. Start all runners (optional)"
     echo ""
     
     check_root
@@ -106,28 +127,44 @@ main() {
     
     echo ""
     
-    # Step 2: Setup GitHub Actions runners
-    if ! run_subscript "${SCRIPT_DIR}/setup_actions.sh" "Step 2: Setting Up GitHub Actions Runners"; then
-        print_error "Runner setup failed. Continuing anyway..."
-    fi
+    # Step 2: Setup GitHub Actions runners (optional)
+    print_header "Step 2: GitHub Actions Runners Setup"
     
-    echo ""
-    
-    # Step 3: Start runners
-    if ! run_subscript "${SCRIPT_DIR}/start_runners.sh" "Step 3: Starting GitHub Actions Runners"; then
-        print_error "Starting runners failed"
+    if prompt_user "Do you want to set up GitHub Actions runners now?"; then
+        if ! run_subscript "${SCRIPT_DIR}/setup_actions.sh" "Setting Up GitHub Actions Runners"; then
+            print_error "Runner setup failed. Continuing anyway..."
+        fi
+        
+        echo ""
+        
+        # Step 3: Start runners (only if setup was done)
+        if prompt_user "Do you want to start the runners now?"; then
+            if ! run_subscript "${SCRIPT_DIR}/start_runners.sh" "Starting GitHub Actions Runners"; then
+                print_error "Starting runners failed"
+            fi
+        else
+            print_info "Skipping runner startup"
+            print_info "You can start runners later with: bash ${SCRIPT_DIR}/start_runners.sh"
+        fi
+    else
+        print_info "Skipping GitHub Actions runners setup"
+        print_info "You can set up runners later with: bash ${SCRIPT_DIR}/setup_actions.sh"
     fi
     
     # Final summary
     print_header "Complete Setup Summary"
     
-    print_status "All setup steps completed!"
+    print_status "Setup completed!"
     echo ""
     print_info "What was installed:"
     echo "  • Docker"
     echo "  • Nginx"
     echo "  • Certbot"
-    echo "  • GitHub Actions Runners"
+    
+    if [ -d "${SCRIPT_DIR}/actions-runners" ] && [ "$(ls -A ${SCRIPT_DIR}/actions-runners 2>/dev/null | grep -v logs)" ]; then
+        echo "  • GitHub Actions Runners"
+    fi
+    
     echo ""
     
     print_info "Important next steps:"
@@ -141,6 +178,7 @@ main() {
     print_info "Useful commands:"
     echo "  • Check runner status: bash ${SCRIPT_DIR}/runner_status.sh"
     echo "  • Start runners: bash ${SCRIPT_DIR}/start_runners.sh"
+    echo "  • Setup runners: bash ${SCRIPT_DIR}/setup_actions.sh"
     echo "  • Stop runners: pkill -f 'run.sh'"
     echo ""
 }

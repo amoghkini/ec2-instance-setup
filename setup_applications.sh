@@ -2,6 +2,7 @@
 
 # Ubuntu Server Initial Setup Script
 # This script performs initial setup including Docker, Nginx, and user configuration
+# Run as: sudo ./setup_applications.sh
 
 set -e
 
@@ -158,7 +159,7 @@ main() {
     print_info "Installed components:"
     echo "  • Docker: $(docker --version)"
     echo "  • Nginx: $(nginx -v 2>&1)"
-    # echo "  • Certbot: $(certbot --version)"
+    echo "  • Certbot: $(certbot --version)"
     echo ""
     
     print_info "Next steps:"
@@ -166,7 +167,7 @@ main() {
     echo "  2. Verify Docker: docker ps"
     echo "  3. Check Nginx: sudo systemctl status nginx"
     echo "  4. Configure Nginx: /etc/nginx/sites-available/"
-    # echo "  5. Setup SSL with Certbot: sudo certbot --nginx -d yourdomain.com"
+    echo "  5. Setup SSL with Certbot: sudo certbot --nginx -d yourdomain.com"
     echo ""
     
     print_warning "Important: Log out and log back in to use Docker without sudo"

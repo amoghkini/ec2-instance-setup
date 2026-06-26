@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Multi-runner startup script
-# This script starts all GitHub runners in the actions-runners folder
-# Each runner runs in the background with separate logging
+# Run as: bash start_runners.sh
 
-# Configuration
-RUNNERS_BASE_DIR="${1:-$(eval echo ~ubuntu)/actions-runners}"
+# Configuration - use current directory as base
+RUNNERS_BASE_DIR="$(pwd)/actions-runners"
 LOGS_DIR="${RUNNERS_BASE_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 

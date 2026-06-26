@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Stop all GitHub runners
-# This script stops all running GitHub runners gracefully
+# Run as: bash stop_runners.sh
 
-# Configuration
-RUNNERS_BASE_DIR="${1:-$(eval echo ~ubuntu)/actions-runners}"
+# Configuration - use current directory as base
+RUNNERS_BASE_DIR="$(pwd)/actions-runners"
 LOGS_DIR="${RUNNERS_BASE_DIR}/logs"
 
 # Colors for output
@@ -71,7 +71,6 @@ find "$RUNNERS_BASE_DIR" -maxdepth 1 -type d ! -name 'logs' ! -name "$(basename 
                 rm "$pid_file"
             fi
         else
-            # Kill by process name if pid file doesn't exist
             pkill -f "${runner_dir}/run.sh" || true
             print_status "Runner $runner_name stopped"
             ((RUNNERS_STOPPED++))

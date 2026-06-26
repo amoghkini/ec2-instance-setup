@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub Actions Runner Status Script
-# This script displays the status of all configured runners
+# Run as: bash runner_status.sh
 
 # Color codes
 RED='\033[0;31m'
@@ -10,10 +10,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-BASE_DIR="${1:-.}"
-RUNNERS_DIR="${BASE_DIR}/actions-runners"
-LOGS_DIR="${RUNNERS_DIR}/logs"
+# Configuration - use current directory as base
+RUNNERS_BASE_DIR="$(pwd)/actions-runners"
+LOGS_DIR="${RUNNERS_BASE_DIR}/logs"
 
 # Functions for colored output
 print_header() {
@@ -43,9 +42,9 @@ check_runner_running() {
     local runner_dir="$1"
     
     if pgrep -f "${runner_dir}/run.sh" > /dev/null 2>&1; then
-        return 0  # Running
+        return 0
     else
-        return 1  # Not running
+        return 1
     fi
 }
 
@@ -54,9 +53,9 @@ check_runner_configured() {
     local runner_dir="$1"
     
     if [ -f "${runner_dir}/.runner" ] && [ -f "${runner_dir}/run.sh" ]; then
-        return 0  # Configured
+        return 0
     else
-        return 1  # Not configured
+        return 1
     fi
 }
 
@@ -78,7 +77,7 @@ show_runner_details() {
     local runner_name=$(basename "$runner_dir")
     
     if [ ! -d "$runner_dir" ]; then
-        print_error "$runner_name: Not set up"
+        print_warning "$runner_name: Not set up"
         return
     fi
     
@@ -93,7 +92,6 @@ show_runner_details() {
             echo "  Status: $(print_status 'RUNNING')"
             echo "  PID: $pid"
             
-            # Show memory and CPU usage if available
             if command -v ps &> /dev/null; then
                 local ps_info=$(ps -p "$pid" -o %cpu=,%mem= 2>/dev/null)
                 if [ -n "$ps_info" ]; then
@@ -104,7 +102,6 @@ show_runner_details() {
             echo "  Status: $(print_warning 'STOPPED')"
         fi
         
-        # Show latest log file
         local latest_log=$(get_latest_log "$runner_name")
         if [ -n "$latest_log" ]; then
             echo "  Latest Log: $latest_log"
@@ -122,9 +119,12 @@ show_runner_details() {
 main() {
     print_header "GitHub Actions Runner Status"
     
+    print_info "Runners directory: $RUNNERS_BASE_DIR"
+    echo ""
+    
     # Check if runners directory exists
-    if [ ! -d "$RUNNERS_DIR" ]; then
-        print_error "Runners directory not found: $RUNNERS_DIR"
+    if [ ! -d "$RUNNERS_BASE_DIR" ]; then
+        print_error "Runners directory not found: $RUNNERS_BASE_DIR"
         exit 1
     fi
     
@@ -152,7 +152,7 @@ main() {
             
             show_runner_details "$runner_dir"
         fi
-    done < <(find "$RUNNERS_DIR" -maxdepth 1 -type d ! -name 'logs' ! -name "$(basename "$RUNNERS_DIR")")
+    done < <(find "$RUNNERS_BASE_DIR" -maxdepth 1 -type d ! -name 'logs' ! -name "$(basename "$RUNNERS_BASE_DIR")")
     
     # Summary
     print_header "Summary"
@@ -181,10 +181,9 @@ main() {
     if [ $running_count -eq 0 ] && [ $runner_count -gt 0 ]; then
         echo ""
         print_warning "No runners are currently running"
-        print_info "To start all runners, run: ./start_runners.sh"
+        print_info "To start all runners, run: bash start_runners.sh"
     fi
 }
 
 # Run main function
 main "$@"
-

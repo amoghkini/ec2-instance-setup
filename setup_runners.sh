@@ -2,7 +2,7 @@
 
 # GitHub Actions Runner Setup Script
 # This script sets up multiple GitHub runners for different repositories
-# It checks for existing runners, generates setup links, and guides configuration
+# Run as: bash setup_actions.sh (as ubuntu user, not root)
 
 set -e
 
@@ -13,8 +13,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-BASE_DIR="${1:-$(eval echo ~ubuntu)}"
+# Configuration - use current directory as base
+BASE_DIR="$(pwd)"
 RUNNERS_DIR="${BASE_DIR}/actions-runners"
 
 # Default repositories (can be overridden)
@@ -49,28 +49,14 @@ print_info() {
 # Function to extract owner/repo from GitHub URL
 extract_repo_info() {
     local url="$1"
-    # Remove .git suffix if present
     url="${url%.git}"
-    # Extract owner/repo from URL
     echo "$url" | sed 's|https://github.com/||'
 }
 
 # Function to get runner folder name from repo
 get_runner_name() {
     local repo="$1"
-    # Extract repo name (last part after /)
     echo "$repo" | awk -F'/' '{print $NF}'
-}
-
-# Function to check if a runner is currently running
-check_runner_running() {
-    local runner_dir="$1"
-    
-    if pgrep -f "${runner_dir}/run.sh" > /dev/null 2>&1; then
-        return 0  # Running
-    else
-        return 1  # Not running
-    fi
 }
 
 # Function to check if runner is configured
@@ -78,9 +64,9 @@ check_runner_configured() {
     local runner_dir="$1"
     
     if [ -f "${runner_dir}/.runner" ] && [ -f "${runner_dir}/run.sh" ]; then
-        return 0  # Configured
+        return 0
     else
-        return 1  # Not configured
+        return 1
     fi
 }
 
@@ -95,11 +81,7 @@ show_runner_status() {
     fi
     
     if check_runner_configured "$runner_dir"; then
-        if check_runner_running "$runner_dir"; then
-            print_status "$runner_name: Configured and RUNNING"
-        else
-            print_warning "$runner_name: Configured but STOPPED"
-        fi
+        print_status "$runner_name: Configured"
     else
         print_warning "$runner_name: Directory exists but NOT configured"
     fi
@@ -154,8 +136,49 @@ setup_runner() {
     mkdir -p "$runner_dir"
     print_status "Created directory: $runner_dir"
     
-    # Generate GitHub Actions runner setup link
-    local setup_link="https://github.com/${repo_info}/settings/actions/runners/new"
+    # Detect OS and architecture for the setup link
+    local os_type=$(uname -s)
+    local arch=$(uname -m)
+    local github_os
+    local github_arch
+    
+    case "$os_type" in
+        Linux)
+            github_os="linux"
+            case "$arch" in
+                x86_64)
+                    github_arch="x64"
+                    ;;
+                aarch64)
+                    github_arch="arm64"
+                    ;;
+                *)
+                    github_arch="x64"
+                    ;;
+            esac
+            ;;
+        Darwin)
+            github_os="macos"
+            case "$arch" in
+                x86_64)
+                    github_arch="x64"
+                    ;;
+                arm64)
+                    github_arch="arm64"
+                    ;;
+                *)
+                    github_arch="x64"
+                    ;;
+            esac
+            ;;
+        *)
+            github_os="linux"
+            github_arch="x64"
+            ;;
+    esac
+    
+    # Generate GitHub Actions runner setup link with OS and architecture
+    local setup_link="https://github.com/${repo_info}/settings/actions/runners/new?arch=${github_arch}&os=${github_os}"
     
     print_header "Configure Runner: $runner_name"
     print_info "Repository: $repo_url"
@@ -182,8 +205,6 @@ setup_runner() {
         print_status "Downloading GitHub Actions runner..."
         
         # Detect OS and architecture
-        local os_type=$(uname -s)
-        local arch=$(uname -m)
         local runner_package
         
         case "$os_type" in
@@ -227,7 +248,7 @@ setup_runner() {
         local runner_url="https://github.com/actions/runner/releases/download/v${latest_version}/${runner_package}-${latest_version}.tar.gz"
         
         print_info "Downloading: ${runner_package}-${latest_version}.tar.gz"
-        print_info "curl -L -o ${runner_package}-${latest_version}.tar.gz $runner_url"
+        
         if cd "$runner_dir" && curl -L -o "${runner_package}-${latest_version}.tar.gz" "$runner_url"; then
             print_status "Downloaded successfully"
             
@@ -244,7 +265,6 @@ setup_runner() {
                 if ./config.sh --url "$repo_url" --token "$config_token" --unattended --replace; then
                     print_status "Runner $runner_name configured successfully!"
                     print_info "Runner is ready at: $runner_dir"
-                    print_info "To start the runner, run: bash start_runners.sh $RUNNERS_DIR"
                 else
                     print_error "Configuration failed for $runner_name"
                 fi
@@ -302,7 +322,7 @@ main() {
     print_status "All runners have been configured!"
     print_info "Next steps:"
     echo -e "  1. Review runner status: $RUNNERS_DIR"
-    echo -e "  2. Start runners using: bash start_runners.sh $RUNNERS_DIR"
+    echo -e "  2. Start runners using: bash start_runners.sh"
     echo -e "  3. Check logs in: $RUNNERS_DIR/logs"
 }
 

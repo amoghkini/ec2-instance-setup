@@ -64,7 +64,7 @@ main() {
     
     # Install Docker
     print_header "Step 2: Installing Docker"
-    
+
     if command_exists docker; then
         print_warning "Docker is already installed"
         docker --version
@@ -98,10 +98,10 @@ main() {
         print_status "Docker installed successfully"
         docker --version
     fi
-    
+
     # Add ubuntu user to docker group
     print_header "Step 3: Configuring Docker User Permissions"
-    
+
     if id -nG "ubuntu" | grep -qw "docker"; then
         print_warning "User 'ubuntu' is already in docker group"
     else
@@ -110,12 +110,18 @@ main() {
         print_info "User 'ubuntu' added to docker group"
         print_warning "Note: You may need to log out and log back in for group changes to take effect"
     fi
-    
+
     # Start and enable Docker
     print_status "Starting Docker service..."
     systemctl start docker
     systemctl enable docker
     print_status "Docker service enabled and started"
+
+    # Fix docker socket permissions
+    print_status "Fixing docker socket permissions..."
+    chmod 666 /var/run/docker.sock
+    print_status "Docker socket permissions fixed"
+
     
     # Install Nginx
     print_header "Step 4: Installing Nginx"

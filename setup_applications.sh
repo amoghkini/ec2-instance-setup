@@ -143,15 +143,19 @@ main() {
     systemctl enable nginx
     print_status "Nginx service enabled and started"
     
-    # Install Certbot (optional, for SSL certificates)
-    print_header "Step 5: Installing Certbot (Optional)"
+    # Install Certbot via Snap
+    print_header "Step 5: Installing Certbot via Snap"
     
     if command_exists certbot; then
         print_warning "Certbot is already installed"
         certbot --version
     else
-        print_status "Installing Certbot and Nginx plugin..."
-        apt install -y certbot python3-certbot-nginx
+        print_status "Installing Certbot via snap..."
+        snap install --classic certbot
+        
+        # Create symlink for easier access
+        print_info "Creating symlink for certbot..."
+        ln -s /snap/bin/certbot /usr/local/bin/certbot || true
         
         print_status "Certbot installed successfully"
         certbot --version
@@ -173,7 +177,12 @@ main() {
     echo "  2. Verify Docker: docker ps"
     echo "  3. Check Nginx: sudo systemctl status nginx"
     echo "  4. Configure Nginx: /etc/nginx/sites-available/"
-    echo "  5. Setup SSL with Certbot: sudo certbot --nginx -d yourdomain.com"
+    echo "  5. Setup SSL with Certbot: sudo certbot --nginx"
+    echo ""
+    
+    print_info "Certbot renewal:"
+    echo "  • Check renewal status: sudo certbot renew --dry-run"
+    echo "  • Renew certificates: sudo certbot renew"
     echo ""
     
     print_warning "Important: Log out and log back in to use Docker without sudo"

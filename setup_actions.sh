@@ -227,7 +227,7 @@ setup_runner() {
         local runner_url="https://github.com/actions/runner/releases/download/v${latest_version}/${runner_package}-${latest_version}.tar.gz"
         
         print_info "Downloading: ${runner_package}-${latest_version}.tar.gz"
-        
+        print_info "curl -L -o ${runner_package}-${latest_version}.tar.gz $runner_url"
         if cd "$runner_dir" && curl -L -o "${runner_package}-${latest_version}.tar.gz" "$runner_url"; then
             print_status "Downloaded successfully"
             

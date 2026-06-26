@@ -155,7 +155,50 @@ setup_runner() {
     print_status "Created directory: $runner_dir"
     
     # Generate GitHub Actions runner setup link
-    local setup_link="https://github.com/${repo_info}/settings/actions/runners/new"
+    # Detect OS and architecture for the setup link
+    local os_type=$(uname -s)
+    local arch=$(uname -m)
+    local github_os
+    local github_arch
+
+    case "$os_type" in
+        Linux)
+            github_os="linux"
+            case "$arch" in
+                x86_64)
+                    github_arch="x64"
+                    ;;
+                aarch64)
+                    github_arch="arm64"
+                    ;;
+                *)
+                    github_arch="x64"  # Default to x64
+                    ;;
+            esac
+            ;;
+        Darwin)
+            github_os="macos"
+            case "$arch" in
+                x86_64)
+                    github_arch="x64"
+                    ;;
+                arm64)
+                    github_arch="arm64"
+                    ;;
+                *)
+                    github_arch="x64"  # Default to x64
+                    ;;
+            esac
+            ;;
+        *)
+            github_os="linux"
+            github_arch="x64"
+            ;;
+    esac
+
+    # Generate GitHub Actions runner setup link with OS and architecture
+    local setup_link="https://github.com/${repo_info}/settings/actions/runners/new?arch=${github_arch}&os=${github_os}"
+
     
     print_header "Configure Runner: $runner_name"
     print_info "Repository: $repo_url"

@@ -53,41 +53,44 @@ find "$RUNNERS_BASE_DIR" -maxdepth 1 -type d ! -name 'logs' ! -name "$(basename 
         continue
     fi
     
-    # Check if runner is running
-    if pgrep -f "${runner_dir}/run.sh" > /dev/null 2>&1; then
-        print_status "Stopping runner: $runner_name"
-        
-        # Get PID from pid file if available
-        pid_file="${LOGS_DIR}/${runner_name}.pid"
-        if [ -f "$pid_file" ]; then
-            PID=$(cat "$pid_file")
-            if kill -0 "$PID" 2>/dev/null; then
-                kill "$PID" 2>/dev/null || true
-                print_status "Runner $runner_name stopped (PID: $PID)"
-                rm "$pid_file"
-                ((RUNNERS_STOPPED++))
-            else
-                print_warning "PID file exists but process not found: $PID"
-                rm "$pid_file"
-            fi
-        else
-            pkill -f "${runner_dir}/run.sh" || true
-            print_status "Runner $runner_name stopped"
-            ((RUNNERS_STOPPED++))
-        fi
-    else
-        print_warning "Runner $runner_name is not running"
-        ((RUNNERS_NOT_RUNNING++))
+    print_status "Stopping runner: $runner_name"
+    
+    # Kill all processes related to this runner
+    pkill -f "${runner_dir}/run.sh" || true
+    pkill -f "${runner_dir}/run-helper.sh" || true
+    pkill -f "${runner_dir}/bin/Runner" || true
+    
+    # Also try by runner name
+    pkill -f "actions-runners/${runner_name}" || true
+    
+    # Remove PID file if it exists
+    pid_file="${LOGS_DIR}/${runner_name}.pid"
+    if [ -f "$pid_file" ]; then
+        rm "$pid_file"
     fi
+    
+    print_status "Runner $runner_name stopped"
+    ((RUNNERS_STOPPED++))
     
 done
 
 echo ""
 print_status "========== Summary =========="
 print_status "Runners stopped: $RUNNERS_STOPPED"
-if [ $RUNNERS_NOT_RUNNING -gt 0 ]; then
-    print_warning "Runners not running: $RUNNERS_NOT_RUNNING"
-fi
 print_status "=============================="
+
+# Final check - kill any remaining runner processes
+print_info "Checking for any remaining runner processes..."
+if pgrep -f "Runner.Listener" > /dev/null; then
+    print_warning "Found remaining Runner.Listener processes, killing them..."
+    pkill -9 -f "Runner.Listener" || true
+fi
+
+if pgrep -f "run-helper.sh" > /dev/null; then
+    print_warning "Found remaining run-helper.sh processes, killing them..."
+    pkill -9 -f "run-helper.sh" > /dev/null || true
+fi
+
+print_status "All runner processes stopped"
 
 exit 0

@@ -135,9 +135,12 @@ main() {
     
     # Step 2: Setup GitHub Actions runners (optional)
     print_header "Step 2: GitHub Actions Runners Setup"
-    
+
     if prompt_user "Do you want to set up GitHub Actions runners now?"; then
-        if ! run_subscript "${SCRIPT_DIR}/setup_actions.sh" "Setting Up GitHub Actions Runners" "$RUNNERS_HOME"; then
+        # Run as ubuntu user, not as root
+        if sudo -u ubuntu bash "${SCRIPT_DIR}/setup_actions.sh" "$RUNNERS_HOME"; then
+            print_status "Setting Up GitHub Actions Runners completed successfully"
+        else
             print_error "Runner setup failed. Continuing anyway..."
         fi
         
@@ -145,7 +148,9 @@ main() {
         
         # Step 3: Start runners (only if setup was done)
         if prompt_user "Do you want to start the runners now?"; then
-            if ! run_subscript "${SCRIPT_DIR}/start_runners.sh" "Starting GitHub Actions Runners" "$RUNNERS_HOME"; then
+            if sudo -u ubuntu bash "${SCRIPT_DIR}/start_runners.sh" "$RUNNERS_HOME"; then
+                print_status "Starting GitHub Actions Runners completed successfully"
+            else
                 print_error "Starting runners failed"
             fi
         else

@@ -1,0 +1,1 @@
+curl -O https://raw.githubusercontent.com/amoghkini/ec2-instance-setup/main/setup.sh

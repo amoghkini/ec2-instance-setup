@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Ubuntu Server Initial Setup Script
-# This script performs initial setup including Docker, Nginx, and user configuration
+# Master Setup Script
+# This script orchestrates the complete server setup including:
+# 1. Application installation (Docker, Nginx, Certbot)
+# 2. GitHub Actions runner configuration
+# 3. Starting all runners
 
 set -e
 
@@ -43,133 +46,103 @@ check_root() {
     fi
 }
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+# Function to check if script exists and is executable
+check_script_exists() {
+    local script="$1"
+    if [ ! -f "$script" ]; then
+        print_error "Script not found: $script"
+        return 1
+    fi
+    if [ ! -x "$script" ]; then
+        print_warning "Script is not executable: $script"
+        print_info "Making it executable..."
+        chmod +x "$script"
+    fi
+    return 0
+}
+
+# Function to run a subscript
+run_subscript() {
+    local script="$1"
+    local description="$2"
+    
+    print_header "$description"
+    
+    if ! check_script_exists "$script"; then
+        print_error "Cannot run $description"
+        return 1
+    fi
+    
+    if bash "$script"; then
+        print_status "$description completed successfully"
+        return 0
+    else
+        print_error "$description failed"
+        return 1
+    fi
 }
 
 # Main setup
 main() {
-    print_header "Ubuntu Server Initial Setup"
+    print_header "Complete Server Setup"
+    print_info "This script will set up your server with:"
+    echo "  1. Docker, Nginx, and Certbot"
+    echo "  2. GitHub Actions runners"
+    echo "  3. Start all runners"
+    echo ""
     
     check_root
     
-    # Update system packages
-    print_header "Step 1: Updating System Packages"
-    print_status "Running apt update..."
-    apt update -y
-    print_status "Running apt upgrade..."
-    apt upgrade -y
+    # Get the directory where this script is located
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     
-    # Install Docker
-    print_header "Step 2: Installing Docker"
-    
-    if command_exists docker; then
-        print_warning "Docker is already installed"
-        docker --version
-    else
-        print_status "Installing Docker..."
-        
-        # Install dependencies
-        apt install -y \
-            apt-transport-https \
-            ca-certificates \
-            curl \
-            gnupg \
-            lsb-release
-        
-        # Add Docker GPG key
-        print_info "Adding Docker GPG key..."
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-        
-        # Add Docker repository
-        print_info "Adding Docker repository..."
-        echo \
-            "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        # Update package index
-        apt update -y
-        
-        # Install Docker
-        apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-        
-        print_status "Docker installed successfully"
-        docker --version
-    fi
-    
-    # Add ubuntu user to docker group
-    print_header "Step 3: Configuring Docker User Permissions"
-    
-    if id -nG "ubuntu" | grep -qw "docker"; then
-        print_warning "User 'ubuntu' is already in docker group"
-    else
-        print_status "Adding user 'ubuntu' to docker group..."
-        usermod -aG docker ubuntu
-        print_info "User 'ubuntu' added to docker group"
-        print_warning "Note: You may need to log out and log back in for group changes to take effect"
-    fi
-    
-    # Start and enable Docker
-    print_status "Starting Docker service..."
-    systemctl start docker
-    systemctl enable docker
-    print_status "Docker service enabled and started"
-    
-    # Install Nginx
-    print_header "Step 4: Installing Nginx"
-    
-    if command_exists nginx; then
-        print_warning "Nginx is already installed"
-        nginx -v
-    else
-        print_status "Installing Nginx..."
-        apt install -y nginx
-        
-        print_status "Nginx installed successfully"
-        nginx -v
-    fi
-    
-    # Start and enable Nginx
-    print_status "Starting Nginx service..."
-    systemctl start nginx
-    systemctl enable nginx
-    print_status "Nginx service enabled and started"
-    
-    # # Install Certbot (optional, for SSL certificates)
-    # print_header "Step 5: Installing Certbot (Optional)"
-    
-    # if command_exists certbot; then
-    #     print_warning "Certbot is already installed"
-    #     certbot --version
-    # else
-    #     print_status "Installing Certbot and Nginx plugin..."
-    #     apt install -y certbot python3-certbot-nginx
-        
-    #     print_status "Certbot installed successfully"
-    #     certbot --version
-    # fi
-    
-    # Summary
-    print_header "Setup Complete"
-    
-    print_status "All components installed successfully!"
-    echo ""
-    print_info "Installed components:"
-    echo "  • Docker: $(docker --version)"
-    echo "  • Nginx: $(nginx -v 2>&1)"
-    # echo "  • Certbot: $(certbot --version)"
+    print_info "Script directory: $SCRIPT_DIR"
     echo ""
     
-    print_info "Next steps:"
+    # Step 1: Install applications
+    if ! run_subscript "${SCRIPT_DIR}/setup_applications.sh" "Step 1: Installing Applications (Docker, Nginx, Certbot)"; then
+        print_error "Application setup failed. Continuing anyway..."
+    fi
+    
+    echo ""
+    
+    # Step 2: Setup GitHub Actions runners
+    if ! run_subscript "${SCRIPT_DIR}/setup_actions.sh" "Step 2: Setting Up GitHub Actions Runners"; then
+        print_error "Runner setup failed. Continuing anyway..."
+    fi
+    
+    echo ""
+    
+    # Step 3: Start runners
+    if ! run_subscript "${SCRIPT_DIR}/start_runners.sh" "Step 3: Starting GitHub Actions Runners"; then
+        print_error "Starting runners failed"
+    fi
+    
+    # Final summary
+    print_header "Complete Setup Summary"
+    
+    print_status "All setup steps completed!"
+    echo ""
+    print_info "What was installed:"
+    echo "  • Docker"
+    echo "  • Nginx"
+    echo "  • Certbot"
+    echo "  • GitHub Actions Runners"
+    echo ""
+    
+    print_info "Important next steps:"
     echo "  1. Log out and log back in for docker group changes to take effect"
-    echo "  2. Verify Docker: docker ps"
-    echo "  3. Check Nginx: sudo systemctl status nginx"
+    echo "  2. Verify runners are running: bash ${SCRIPT_DIR}/runner_status.sh"
+    echo "  3. Check runner logs: tail -f ./actions-runners/logs/*.log"
     echo "  4. Configure Nginx: /etc/nginx/sites-available/"
-    # echo "  5. Setup SSL with Certbot: sudo certbot --nginx -d yourdomain.com"
+    echo "  5. Setup SSL: sudo certbot --nginx -d yourdomain.com"
     echo ""
     
-    print_warning "Important: Log out and log back in to use Docker without sudo"
+    print_info "Useful commands:"
+    echo "  • Check runner status: bash ${SCRIPT_DIR}/runner_status.sh"
+    echo "  • Start runners: bash ${SCRIPT_DIR}/start_runners.sh"
+    echo "  • Stop runners: pkill -f 'run.sh'"
+    echo ""
 }
 
 # Run main function
